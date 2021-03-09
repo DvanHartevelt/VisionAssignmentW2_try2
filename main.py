@@ -42,11 +42,6 @@ def gray_convolute3x3(img, kernel):
 
                 newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
 
-                if newValue < 0:
-                    newValue = 0
-                if newValue > 255:
-                    newValue = 255
-
                 imgNew[y, x] = newValue
 
             pb.printProgressBar(y, height - 2, prefix=f'Convoluting...:', length=50)
@@ -56,14 +51,14 @@ def gray_convolute3x3(img, kernel):
                 # using the dotproduct of our kernel and a slice of img
                 newValue = (kernel * img[y - 1: y + 2, x - 1: x + 2]).sum()
 
-                newValue = np.interp(newValue, [0, weightsum * 255], [0, 255])
+                newValue = newValue / weightsum
 
                 if newValue < 0:
                     newValue = 0
                 if newValue > 255:
                     newValue = 255
 
-                imgNew[y, x] = newValue
+                imgNew[y, x] = int(newValue)
 
             pb.printProgressBar(y, height - 2, prefix=f'Convoluting...:', length=50)
 
@@ -87,9 +82,9 @@ def main():
     """
     #Blurring
     """
-    kernelBoxBlur = np.array([[1, 1, 1],
-                              [1, 1, 1],
-                              [1, 1, 1]])
+    kernelBoxBlur =         np.array([[1, 1, 1],
+                                      [1, 1, 1],
+                                      [1, 1, 1]])
     kernelGaussianLowPass = np.array([[1, 2, 1],
                                       [2, 4, 2],
                                       [1, 2, 2]])
@@ -327,11 +322,6 @@ def main():
 
                     newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
 
-                    if newValue < 0:
-                        newValue = 0
-                    if newValue > 255:
-                        newValue = 255
-
                     imgNew[y, x] = newValue
 
                 pb.printProgressBar(y, height - 2, prefix=f'Applying matched filter...:', length=50)
@@ -341,14 +331,14 @@ def main():
                     # using the dotproduct of our kernel and a slice of img
                     newValue = (filter * img[y : y + fheight, x : x + fwidth]).sum()
 
-                    newValue = np.interp(newValue, [0, weightsum * 255], [0, 255])
+                    newValue = newValue / weightsum
 
                     if newValue < 0:
                         newValue = 0
                     if newValue > 255:
                         newValue = 255
 
-                    imgNew[y, x] = newValue
+                    imgNew[y, x] = int(newValue)
 
                 pb.printProgressBar(y, height - fheight -1, prefix=f'Applying matched filter...:', length=50)
 
