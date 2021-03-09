@@ -235,7 +235,8 @@ def main():
     cv2.imshow('Original', imgCat)
     cv2.imshow('Prewitt', imgCatPrewitt)
     cv2.imshow('Sobel', imgCatSobel)
-    
+
+    cv2.waitKey(0)
     
     imgPonyPrewitt = Prewitt(imgPony)
     imgPonySobel = Sobel(imgPony)
