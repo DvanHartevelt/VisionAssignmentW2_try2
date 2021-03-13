@@ -22,45 +22,38 @@ def gray_convolute3x3(img, kernel):
 
     imgNew = np.zeros_like(img)
 
-    # A sweep over all the pixels in img
+    # checking if the kernel requires remapping (sum = 0) or a devision by the weightsum (sum != 0)
     weightsum = kernel.sum()
     if weightsum == 0:
-        #determining weight factors
+        # determining weight factors
         hi = 0
         lo = 0
         for i in range(3):
             for j in range(3):
-                if kernel[i,j] < 0:
-                    lo += kernel[i,j]
+                if kernel[i, j] < 0:
+                    lo += kernel[i, j]
                 else:
-                    hi += kernel[i,j]
+                    hi += kernel[i, j]
+    elif weightsum > 0:
+        lo, hi = 0, weightsum
+    else: #weightsum < 0, I say this also means the picture is inverted
+        lo, hi = weightsum, 0
 
-        for y in range(1, height - 1):
-            for x in range(1, width - 1):
-                # using the dotproduct of our kernel and a slice of img
-                newValue = (kernel * img[y - 1: y + 2, x - 1: x + 2]).sum()
+    # Sweeping over all pixels, exept for the 1pixel thick boundry
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            # using the dotproduct of our kernel and a slice of img
+            newValue = (kernel * img[y - 1: y + 2, x - 1: x + 2]).sum()
 
-                newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
+            newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
 
-                imgNew[y, x] = newValue
+            if newValue < 0:
+                newValue = 0
+            if newValue > 255:
+                newValue = 255
 
-            pb.printProgressBar(y, height - 2, prefix=f'Convoluting...:', length=50)
-    else:
-        for y in range(1, height - 1):
-            for x in range(1, width - 1):
-                # using the dotproduct of our kernel and a slice of img
-                newValue = (kernel * img[y - 1: y + 2, x - 1: x + 2]).sum()
-
-                newValue = newValue / weightsum
-
-                if newValue < 0:
-                    newValue = 0
-                if newValue > 255:
-                    newValue = 255
-
-                imgNew[y, x] = int(newValue)
-
-            pb.printProgressBar(y, height - 2, prefix=f'Convoluting...:', length=50)
+            imgNew[y, x] = int(newValue)
+        pb.printProgressBar(y, height - 2, prefix=f'Convoluting...:', length=50)
 
     return imgNew
 
@@ -68,16 +61,19 @@ def main():
     #import original pictures
     imgCat = cv2.imread("Resources/smollCat.jpeg", 0)
     imgCat = cv2.resize(imgCat, (int(imgCat.shape[1]/3), int(imgCat.shape[0]/3)))
+    cv2.imwrite("Output/Cat.png", imgCat)
 
     imgMoon = cv2.imread("Resources/Moon.jpeg", 0)
     imgMoon = cv2.resize(imgMoon, (int(imgMoon.shape[1]/2), int(imgMoon.shape[0]/2)))
+    cv2.imwrite("Output/Moon.png", imgMoon)
 
     imgBuild = cv2.imread("Resources/buildings.png", 0)
     imgBuild = cv2.resize(imgBuild, (int(imgBuild.shape[1]/2), int(imgBuild.shape[0]/2)))
+    cv2.imwrite("Output/Building.png", imgBuild)
 
     imgPony = cv2.imread("Resources/pony.jpeg", 0)
     imgPony = cv2.resize(imgPony, (int(imgPony.shape[1]/4), int(imgPony.shape[0]/4)))
-
+    cv2.imwrite("Output/Ponny.png", imgPony)
 
     """
     #Blurring
@@ -93,7 +89,7 @@ def main():
     imgCatGausianLowPass = gray_convolute3x3(imgCat, kernelGaussianLowPass)
 
     cv2.imwrite("Output/CatBoxBlurred.png", imgCatBoxBlurred)
-    cv2.imwrite("Output/CatGausianLowPass.png", imgCatGausianLowPass)
+    cv2.imwrite("Output/CatGaussianLowPass.png", imgCatGausianLowPass)
 
     cv2.imshow('Original', imgCat)
     cv2.imshow('Boxblurred', imgCatBoxBlurred)
@@ -106,7 +102,6 @@ def main():
     """
     #Laplacian sharpening
     """
-
     kernelLaplacian4 = np.array([[ 0, -1,  0],
                                  [-1,  4, -1],
                                  [ 0, -1,  0]])
@@ -170,8 +165,8 @@ def main():
                            [-1, 0, 1],
                            [-1, 0, 1]])
 
-        PWHori = np.array([[1,  1,   1],
-                           [0,  0,   0],
+        PWHori = np.array([[ 1,  1,  1],
+                           [ 0,  0,  0],
                            [-1, -1, -1]])
 
         imgNew = np.zeros_like(img)
@@ -192,7 +187,6 @@ def main():
                 imgNew[y, x] = newValue
 
             pb.printProgressBar(y, height - 2, prefix=f'Applying Prewitt filter...:', length=50)
-
         return imgNew
 
     def Sobel(img):
@@ -200,8 +194,8 @@ def main():
                            [-2, 0, 2],
                            [-1, 0, 1]])
 
-        SBHori = np.array([[1, 2, 1],
-                           [0, 0, 0],
+        SBHori = np.array([[ 1,  2,  1],
+                           [ 0,  0,  0],
                            [-1, -2, -1]])
 
         imgNew = np.zeros_like(img)
@@ -252,7 +246,7 @@ def main():
 
     
     """
-    #minmax operator
+    # MaxMin operator
     """
     def MaxMin(img):
         imgNew = np.zeros_like(img)
@@ -265,17 +259,8 @@ def main():
                 max = img[y - 1: y + 2, x - 1: x + 2].max()
                 min = img[y - 1: y + 2, x - 1: x + 2].min()
 
-                newValue = max - min
-
-                if newValue < 0:
-                    newValue = 0
-                if newValue > 255:
-                    newValue = 255
-
-                imgNew[y, x] = newValue
-
+                imgNew[y, x] = max - min
             pb.printProgressBar(y, height - 2, prefix=f'Applying MaxMin filter...:', length=50)
-
         return imgNew
 
     imgPonyMaxMin = MaxMin(imgPony)
@@ -287,6 +272,14 @@ def main():
 
     cv2.waitKey(0)
 
+    imgCatMaxMin = MaxMin(imgCat)
+
+    cv2.imwrite("Output/CatMaxMin.png", imgCatMaxMin)
+
+    cv2.imshow('Original', imgCat)
+    cv2.imshow('MaxMin', imgCatMaxMin)
+
+    cv2.waitKey(0)
 
 
 
@@ -315,33 +308,25 @@ def main():
                         lo += filter[i, j]
                     else:
                         hi += filter[i, j]
+        elif weightsum > 0:
+            lo, hi = 0, weightsum
+        else:  # weightsum < 0, I say this also means the picture is inverted
+            lo, hi = weightsum, 0
 
-            for y in range(height - fheight):
-                for x in range(width - fwidth):
-                    # using the dotproduct of our filter and a slice of img
-                    newValue = (filter * img[y: y + fheight, x : x + fwidth]).sum()
+        for y in range(height - fheight):
+            for x in range(width - fwidth):
+                # using the dotproduct of our filter and a slice of img
+                newValue = (filter * img[y: y + fheight, x : x + fwidth]).sum()
 
-                    newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
+                newValue = np.interp(newValue, [lo * 255, hi * 255], [0, 255])
 
-                    imgNew[y, x] = newValue
+                if newValue < 0:
+                    newValue = 0
+                if newValue > 255:
+                    newValue = 255
 
-                pb.printProgressBar(y, height - 2, prefix=f'Applying matched filter...:', length=50)
-        else:
-            for y in range(height - fheight):
-                for x in range(width - fwidth):
-                    # using the dotproduct of our kernel and a slice of img
-                    newValue = (filter * img[y : y + fheight, x : x + fwidth]).sum()
-
-                    newValue = newValue / weightsum
-
-                    if newValue < 0:
-                        newValue = 0
-                    if newValue > 255:
-                        newValue = 255
-
-                    imgNew[y, x] = int(newValue)
-
-                pb.printProgressBar(y, height - fheight -1, prefix=f'Applying matched filter...:', length=50)
+                imgNew[y, x] = newValue
+            pb.printProgressBar(y, height - 2, prefix=f'Applying matched filter...:', length=50)
 
         return imgNew
 
